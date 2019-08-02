@@ -62,10 +62,12 @@ typedef AlignedVector<LongIndex> LongIndexVector;
 typedef LongIndexVector GlobalIndexVector;
 
 struct Color;
+struct Semantic;
 
 // Pointcloud types for external interface.
 typedef AlignedVector<Point> Pointcloud;
 typedef AlignedVector<Color> Colors;
+typedef AlignedVector<Semantic> Semantics;
 
 // For triangle meshing/vertex access.
 typedef size_t VertexIndex;
@@ -136,6 +138,45 @@ struct Color {
   static const Color Purple() { return Color(127, 0, 255); }
   static const Color Teal() { return Color(0, 255, 255); }
   static const Color Pink() { return Color(255, 0, 127); }
+};
+
+struct Semantic {
+  Semantic() = default;
+
+  double evidence_pro{0.0};  // Evidence pro hypothesis
+  double evidence_con{0.0};  // Evidence contra or against hypothesis
+
+  static double evidence(const std::vector<double>& probabilities) {
+    double evidence = 1.0;
+
+    for (const double p : probabilities) {
+      if (p >= 0.0) {
+        evidence *= (1.0 - p);
+      }
+    }
+
+    return 1.0 - evidence;
+  }
+
+  void setEvidence(const double e_plus, const double e_minus) noexcept {
+    const double denominator = 1.0 - e_plus * e_minus;
+
+    evidence_pro = (e_plus * (1 - e_minus)) / denominator;
+    evidence_con = (e_minus * (1 - e_plus)) / denominator;
+  }
+
+  static Semantic fuseTwoEvidences(const Semantic& first_measurement,
+                                   const Semantic& second_measurement) {
+    const double e_plus = evidence(std::vector<double>(
+        first_measurement.evidence_pro, second_measurement.evidence_pro));
+    const double e_minus = evidence(std::vector<double>(
+        first_measurement.evidence_con, second_measurement.evidence_con));
+
+    Semantic result;
+    result.setEvidence(e_plus, e_minus);
+
+    return result;
+  }
 };
 
 // Constants used across the library.

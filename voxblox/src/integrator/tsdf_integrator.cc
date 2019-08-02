@@ -170,7 +170,8 @@ void TsdfIntegratorBase::updateLayerWithStoredBlocks() {
 void TsdfIntegratorBase::updateTsdfVoxel(const Point& origin,
                                          const Point& point_G,
                                          const GlobalIndex& global_voxel_idx,
-                                         const Color& color, const float weight,
+                                         const Color& color, const Semantic& semantic,
+                                         const float weight,
                                          TsdfVoxel* tsdf_voxel) {
   DCHECK(tsdf_voxel != nullptr);
 
@@ -221,6 +222,8 @@ void TsdfIntegratorBase::updateTsdfVoxel(const Point& origin,
   if (std::abs(sdf) < config_.default_truncation_distance) {
     tsdf_voxel->color = Color::blendTwoColors(
         tsdf_voxel->color, tsdf_voxel->weight, color, updated_weight);
+    tsdf_voxel->semantic =
+        Semantic::fuseTwoEvidences(tsdf_voxel->semantic, semantic);
   }
 
   tsdf_voxel->distance =
@@ -517,6 +520,7 @@ void FastTsdfIntegrator::integrateFunction(const Transformation& T_G_C,
               .count() < config_.max_integration_time_s * 1000000)) {
     const Point& point_C = points_C[point_idx];
     const Color& color = colors[point_idx];
+    const Semantic& semantic = semantics[point_idx];
     bool is_clearing;
     if (!isPointValid(point_C, freespace_points, &is_clearing)) {
       continue;
@@ -565,7 +569,8 @@ void FastTsdfIntegrator::integrateFunction(const Transformation& T_G_C,
 
       const float weight = getVoxelWeight(point_C);
 
-      updateTsdfVoxel(origin, point_G, global_voxel_idx, color, weight, voxel);
+      updateTsdfVoxel(origin, point_G, global_voxel_idx, color, semantic,
+                      weight, voxel);
     }
   }
 }
@@ -573,9 +578,11 @@ void FastTsdfIntegrator::integrateFunction(const Transformation& T_G_C,
 void FastTsdfIntegrator::integratePointCloud(const Transformation& T_G_C,
                                              const Pointcloud& points_C,
                                              const Colors& colors,
+                                             const Semantics& semantics,
                                              const bool freespace_points) {
   timing::Timer integrate_timer("integrate/fast");
   CHECK_EQ(points_C.size(), colors.size());
+  CHECK_EQ(points_C.size(), semantics.size());
 
   integration_start_time_ = std::chrono::steady_clock::now();
 

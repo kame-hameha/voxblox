@@ -93,6 +93,7 @@ class TsdfIntegratorBase {
   virtual void integratePointCloud(const Transformation& T_G_C,
                                    const Pointcloud& points_C,
                                    const Colors& colors,
+                                   const Semantics& semantics,
                                    const bool freespace_points = false) = 0;
 
   /// Returns a CONST ref of the config.
@@ -129,8 +130,8 @@ class TsdfIntegratorBase {
   /// Updates tsdf_voxel, Thread safe.
   void updateTsdfVoxel(const Point& origin, const Point& point_G,
                        const GlobalIndex& global_voxel_index,
-                       const Color& color, const float weight,
-                       TsdfVoxel* tsdf_voxel);
+                       const Color& color, const Semantic& semantic,
+                       const float weight, TsdfVoxel* tsdf_voxel);
 
   /// Calculates TSDF distance, Thread safe.
   float computeDistance(const Point& origin, const Point& point_G,
@@ -269,11 +270,13 @@ class FastTsdfIntegrator : public TsdfIntegratorBase {
 
   void integrateFunction(const Transformation& T_G_C,
                          const Pointcloud& points_C, const Colors& colors,
+                         const Semantics& semantics,
                          const bool freespace_points,
                          ThreadSafeIndex* index_getter);
 
   void integratePointCloud(const Transformation& T_G_C,
                            const Pointcloud& points_C, const Colors& colors,
+                           const Semantics& semantics,
                            const bool freespace_points = false);
 
  private:
